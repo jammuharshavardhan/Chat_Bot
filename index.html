@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CHICHU CHATBOT</title>
+
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --accent-color: #6ab0f3;
+      --text-color: #000000;
+      --user-msg-bg: #d0c5f9;
+      --bot-msg-bg: #f1f1f1;
+      --bg-main: #ffffff;
+      --bg-chatbox: #ffffff;
+      --bg-sidebar: #87ceeb;
+      --bg-input: #f9f9f9;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      height: 100vh;
+      background-color: var(--bg-main);
+      color: var(--text-color);
+    }
+
+    .sidebar {
+      width: 220px;
+      background: var(--bg-sidebar);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      border-right: 2px solid #ccc;
+      color: black;
+    }
+
+    .sidebar img {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+
+    .sidebar h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .sidebar button {
+      background: #ffffff;
+      color: black;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-bottom: 15px;
+      width: 100%;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar button:hover {
+      background: var(--accent-color);
+      color: white;
+      transform: scale(1.05);
+    }
+
+    .chat-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      overflow-y: auto;
+    }
+
+    .chat-tab-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+
+    .chat-tab {
+      flex: 1;
+      cursor: pointer;
+      font-size: 14px;
+      background: transparent;
+      border: none;
+      color: #000;
+      text-align: left;
+    }
+
+    .chat-tab.active {
+      font-weight: bold;
+    }
+
+    .delete-btn {
+      cursor: pointer;
+    }
+
+    .delete-btn i {
+      width: 18px;
+      height: 18px;
+      color: #ff6b6b;
+    }
+
+    .chat-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    #chatbox {
+      flex: 1;
+      background: var(--bg-chatbox);
+      border-radius: 12px;
+      padding: 15px;
+      overflow-y: auto;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .message {
+      margin: 10px 0;
+      padding: 12px 16px;
+      border-radius: 12px;
+      max-width: 75%;
+      font-size: 15px;
+      animation: fadeIn 0.3s ease-in-out;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+      word-break: break-word;
+    }
+
+    .user {
+      align-self: flex-end;
+      background: var(--user-msg-bg);
+      color: black;
+    }
+
+    .bot {
+      align-self: flex-start;
+      background: var(--bot-msg-bg);
+      color: black;
+    }
+
+    #inputForm {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #userInput {
+      flex: 1;
+      padding: 10px;
+      background: var(--bg-input);
+      color: black;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+    }
+
+    .input-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .input-actions label,
+    .input-actions button {
+      background: #e0e0e0;
+      border-radius: 50%;
+      padding: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid black; /* 👈 added border for all icons */
+    }
+
+    .input-actions i {
+      width: 24px;
+      height: 24px;
+      color: black;
+    }
+
+    .input-actions button:hover,
+    .input-actions label:hover {
+      background: var(--accent-color);
+      color: white;
+      transform: scale(1.1);
+    }
+
+    .input-actions input[type="file"] {
+      display: none;
+    }
+
+    .welcome {
+      text-align: center;
+      color: #666;
+      font-size: 20px;
+    }
+
+    .welcome-emoji {
+      font-size: 60px;
+      margin-bottom: 12px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <img src="{{ url_for('static', filename='favicon.png') }}" alt="chichu Logo" />
+    <h2>Chichu Chat</h2>
+    <button onclick="createNewChat()">+ New Chat</button>
+    <div class="chat-list" id="chatList"></div>
+  </div>
+
+  <div class="chat-wrapper">
+    <div id="chatbox">
+      <div id="welcome" class="welcome">
+        <div class="welcome-emoji">🤖</div>
+        <p>Welcome to CHICHU CHAT<br>Start your new conversations</p>
+      </div>
+    </div>
+
+    <form id="inputForm">
+      <input type="text" id="userInput" autocomplete="off" placeholder="Type your message..." required />
+      <div class="input-actions">
+        <label for="fileInput" title="Attach file">
+          <i data-lucide="paperclip"></i>
+        </label>
+        <input type="file" id="fileInput" />
+
+        <label for="imgInput" title="Send image">
+          <i data-lucide="camera"></i>
+        </label>
+        <input type="file" id="imgInput" accept="image/*" />
+
+        <button type="button" title="Mic" onclick="startSpeech()">
+          <i data-lucide="mic"></i>
+        </button>
+
+        <button type="submit" title="Send">
+          <i data-lucide="send"></i>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const chatbox = document.getElementById('chatbox');
+    const welcome = document.getElementById('welcome');
+    const inputForm = document.getElementById('inputForm');
+    const userInput = document.getElementById('userInput');
+    const chatList = document.getElementById('chatList');
+
+    let sessions = {};
+    let activeSessionId = null;
+
+    function createNewChat() {
+      const sessionId = 'chat_' + Date.now();
+      sessions[sessionId] = [];
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'chat-tab-wrapper';
+
+      const tab = document.createElement('div');
+      tab.className = 'chat-tab';
+      tab.textContent = 'New Chat';
+      tab.dataset.id = sessionId;
+
+      const delBtn = document.createElement('span');
+      delBtn.className = 'delete-btn';
+      delBtn.innerHTML = '<i data-lucide="trash-2"></i>';
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteChat(sessionId, wrapper, tab);
+      };
+
+      tab.onclick = () => switchSession(sessionId, tab);
+
+      wrapper.appendChild(tab);
+      wrapper.appendChild(delBtn);
+      chatList.appendChild(wrapper);
+
+      switchSession(sessionId, tab);
+      lucide.createIcons();
+    }
+
+    function switchSession(sessionId, tabElement) {
+      activeSessionId = sessionId;
+      document.querySelectorAll('.chat-tab').forEach(tab => tab.classList.remove('active'));
+      tabElement.classList.add('active');
+      chatbox.innerHTML = '';
+      const messages = sessions[sessionId];
+      if (messages.length === 0) {
+        chatbox.appendChild(welcome);
+      }
+      messages.forEach(msg => appendMessage(msg.sender, msg.text, msg.isHTML));
+    }
+
+    function deleteChat(sessionId, wrapper, tab) {
+      delete sessions[sessionId];
+      wrapper.remove();
+      if (activeSessionId === sessionId) {
+        const tabs = document.querySelectorAll('.chat-tab');
+        if (tabs.length > 0) switchSession(tabs[0].dataset.id, tabs[0]);
+        else createNewChat();
+      }
+    }
+
+    function appendMessage(sender, text, isHTML = false) {
+      if (welcome) welcome.remove();
+      const div = document.createElement('div');
+      div.className = 'message ' + sender;
+      if (isHTML) div.innerHTML = text;
+      else div.textContent = text;
+      chatbox.appendChild(div);
+      chatbox.scrollTop = chatbox.scrollHeight;
+      sessions[activeSessionId].push({ sender, text, isHTML });
+    }
+
+    inputForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const message = userInput.value.trim();
+      if (!message || !activeSessionId) return;
+
+      appendMessage('user', message);
+      userInput.value = '';
+      userInput.disabled = true;
+
+      const loader = document.createElement('div');
+      loader.className = 'message bot';
+      loader.textContent = 'Analyzing';
+      chatbox.appendChild(loader);
+      let dotCount = 0;
+      const interval = setInterval(() => {
+        dotCount = (dotCount + 1) % 4;
+        loader.textContent = 'Analyzing' + '.'.repeat(dotCount);
+      }, 500);
+
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await response.json();
+        clearInterval(interval);
+        loader.remove();
+        appendMessage('bot', data.reply || 'No response');
+      } catch (err) {
+        clearInterval(interval);
+        loader.remove();
+        appendMessage('bot', 'Error: ' + err.message);
+      } finally {
+        userInput.disabled = false;
+        userInput.focus();
+      }
+    });
+
+    document.getElementById('fileInput').addEventListener('change', function () {
+      const file = this.files[0];
+      if (file) appendMessage('user', `📎 File attached: ${file.name}`);
+    });
+
+    document.getElementById('imgInput').addEventListener('change', function () {
+      const file = this.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          appendMessage('user', `<img src="${e.target.result}" style="max-width:200px;border-radius:8px;" />`, true);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    function startSpeech() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.onresult = function (event) {
+        userInput.value = event.results[0][0].transcript;
+        userInput.focus();
+      };
+      recognition.start();
+    }
+
+    createNewChat();
+    lucide.createIcons();
+  </script>
+</body>
+</html>
